@@ -1,40 +1,63 @@
-// src/App.js - 페이지네이션 추가
+// src/App.js
+/**
+ * 올리브영 재고 관리 시스템
+ * 기존 products.py API 구조에 맞춰 수정됨
+ */
 import React, { useState, useEffect } from 'react';
 import { productAPI } from './services/api';
 import './App.css';
 
 function App() {
   const [products, setProducts] = useState([]);
-  const [allProducts, setAllProducts] = useState([]); // 👈 추가: 전체 상품 저장
+  const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const [productCount, setProductCount] = useState({
     total: 0,
     active: 0,
     inactive: 0
   });
 
+  // 필터 옵션 (API 응답 구조에 맞춤)
   const [filterOptions, setFilterOptions] = useState({
     brands: [],
     categories: [],
     sub_categories: [],
-    tags: []
+    skin_types: [],
+    price_ranges: []
   });
 
   const [activeFilterType, setActiveFilterType] = useState('brands');
   const [showAllFilters, setShowAllFilters] = useState(false);
 
-  // 👇 추가: 페이지네이션 상태
+  // 페이지네이션
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10); // 페이지당 10개
+  const [itemsPerPage] = useState(12);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // 선택된 필터들
+  const [selectedFilters, setSelectedFilters] = useState({
+    brands: [],
+    categories: [],
+    sub_categories: [],
+    skin_types: []
+  });
+
+  // 가격 범위
+  const [priceRange, setPriceRange] = useState({
+    min: null,
+    max: null
+  });
+
+  // 정렬 옵션
+  const [sortBy, setSortBy] = useState('popularity');
 
   useEffect(() => {
     initializeApp();
   }, []);
 
-  // 👇 추가: 페이지 변경 시 자동 스크롤
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
@@ -44,28 +67,36 @@ function App() {
       setLoading(true);
       setError(null);
 
+      // 상품 개수 조회
       const countResponse = await productAPI.getProductCount();
-      const { total_count, active_count, inactive_count } = countResponse.data;
-      
-      setProductCount({
-        total: total_count,
-        active: active_count,
-        inactive: inactive_count
-      });
+      if (countResponse.data.success) {
+        const { total_count, active_count, inactive_count } = countResponse.data;
+        setProductCount({
+          total: total_count || 0,
+          active: active_count || 0,
+          inactive: inactive_count || 0
+        });
+      }
 
+      // 필터 옵션 조회
       const filterResponse = await productAPI.getFilterOptions();
-      setFilterOptions(filterResponse.data);
+      if (filterResponse.data.success) {
+        setFilterOptions(filterResponse.data.filters || {
+          brands: [],
+          categories: [],
+          sub_categories: [],
+          skin_types: [],
+          price_ranges: []
+        });
+      }
 
-      console.log('📊 필터 옵션 로드:', filterResponse.data);
-
-      const productsResponse = await productAPI.getAllProducts(active_count || 1000);
-      setAllProducts(productsResponse.data); // 👈 수정: 전체 상품 저장
-      
-      // 👈 추가: 첫 페이지 상품만 표시
-      setProducts(productsResponse.data.slice(0, itemsPerPage));
+      // 전체 상품 조회
+      const productsResponse = await productAPI.getAllProducts(100, 0);
+      const productsData = productsResponse.data || [];
+      setAllProducts(productsData);
+      setTotalItems(productsData.length);
+      setProducts(productsData.slice(0, itemsPerPage));
       setCurrentPage(1);
-
-      console.log(`✅ 상품 ${productsResponse.data.length}개 로드 완료`);
 
     } catch (err) {
       setError('상품을 불러오는데 실패했습니다. FastAPI 서버가 실행 중인지 확인하세요.');
@@ -79,15 +110,25 @@ function App() {
     try {
       setLoading(true);
       setError(null);
+
+      const response = await productAPI.getAllProducts(100, 0);
+      const productsData = response.data || [];
       
-      const limit = productCount.active > 0 ? productCount.active : 1000;
-      const response = await productAPI.getAllProducts(limit);
-      
-      setAllProducts(response.data); // 👈 수정
-      setProducts(response.data.slice(0, itemsPerPage)); // 👈 추가
-      setCurrentPage(1); // 👈 추가: 첫 페이지로
+      setAllProducts(productsData);
+      setTotalItems(productsData.length);
+      setProducts(productsData.slice(0, itemsPerPage));
+      setCurrentPage(1);
       setSearchQuery('');
       
+      // 필터 초기화
+      setSelectedFilters({
+        brands: [],
+        categories: [],
+        sub_categories: [],
+        skin_types: []
+      });
+      setPriceRange({ min: null, max: null });
+
     } catch (err) {
       setError('상품을 불러오는데 실패했습니다.');
       console.error('API 에러:', err);
@@ -105,14 +146,15 @@ function App() {
     try {
       setLoading(true);
       setError(null);
+
+      const response = await productAPI.quickSearch(searchQuery, 100);
+      const productsData = response.data || [];
       
-      const limit = productCount.active > 0 ? productCount.active : 100;
-      const response = await productAPI.quickSearch(searchQuery, limit);
-      
-      setAllProducts(response.data); // 👈 수정
-      setProducts(response.data.slice(0, itemsPerPage)); // 👈 추가
-      setCurrentPage(1); // 👈 추가
-      
+      setAllProducts(productsData);
+      setTotalItems(productsData.length);
+      setProducts(productsData.slice(0, itemsPerPage));
+      setCurrentPage(1);
+
     } catch (err) {
       setError('검색에 실패했습니다.');
       console.error('검색 에러:', err);
@@ -121,23 +163,34 @@ function App() {
     }
   };
 
-  const handleFilterClick = async (filterValue) => {
+  // 단일 필터 빠른 적용 (카테고리, 브랜드 등)
+  const handleQuickFilter = async (filterType, value) => {
     try {
       setLoading(true);
       setError(null);
-      setSearchQuery(filterValue);
-      
-      const limit = productCount.active > 0 ? productCount.active : 100;
-      const response = await productAPI.searchByFilter(activeFilterType, filterValue, limit);
-      
-      setAllProducts(response.data); // 👈 수정
-      setProducts(response.data.slice(0, itemsPerPage)); // 👈 추가
-      setCurrentPage(1); // 👈 추가
-      
-      console.log(`🔍 필터 검색: ${filterValue} (${response.data.length}개 발견)`);
-      
+
+      let response;
+      if (filterType === 'brands') {
+        response = await productAPI.getProductsByBrand(value, 100);
+      } else if (filterType === 'categories') {
+        response = await productAPI.getProductsByCategory(value, 100);
+      } else {
+        // 일반 검색 API 사용
+        const params = {
+          [filterType === 'sub_categories' ? 'sub_category' : 
+           filterType === 'skin_types' ? 'skin_type' : filterType]: value,
+          page_size: 100
+        };
+        response = await productAPI.searchProducts(params);
+      }
+
+      const productsData = response.data.products || response.data || [];
+      setAllProducts(productsData);
+      setTotalItems(productsData.length);
+      setProducts(productsData.slice(0, itemsPerPage));
+      setCurrentPage(1);
       setShowAllFilters(false);
-      
+
     } catch (err) {
       setError('필터 검색에 실패했습니다.');
       console.error('필터 검색 에러:', err);
@@ -146,41 +199,131 @@ function App() {
     }
   };
 
+  // 다중 필터 적용
+  const applyMultipleFilters = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // 선택된 필터가 없으면 전체 상품 로드
+      const hasFilters = 
+        Object.values(selectedFilters).some(arr => arr.length > 0) ||
+        priceRange.min !== null ||
+        priceRange.max !== null;
+
+      if (!hasFilters) {
+        loadProducts();
+        return;
+      }
+
+      // API 파라미터 구성
+      const params = {
+        page: 1,
+        page_size: 100,
+        sort_by: sortBy
+      };
+
+      // 브랜드 필터 (첫 번째만 사용 - API가 단일 값만 받음)
+      if (selectedFilters.brands.length > 0) {
+        params.brand = selectedFilters.brands[0];
+      }
+
+      // 카테고리 필터
+      if (selectedFilters.categories.length > 0) {
+        params.category = selectedFilters.categories[0];
+      }
+
+      // 서브카테고리 필터
+      if (selectedFilters.sub_categories.length > 0) {
+        params.sub_category = selectedFilters.sub_categories[0];
+      }
+
+      // 피부타입 필터
+      if (selectedFilters.skin_types.length > 0) {
+        params.skin_type = selectedFilters.skin_types[0];
+      }
+
+      // 가격 범위
+      if (priceRange.min !== null) {
+        params.min_price = priceRange.min;
+      }
+      if (priceRange.max !== null) {
+        params.max_price = priceRange.max;
+      }
+
+      const response = await productAPI.searchProducts(params);
+      const productsData = response.data.products || [];
+      
+      setAllProducts(productsData);
+      setTotalItems(response.data.total || productsData.length);
+      setProducts(productsData.slice(0, itemsPerPage));
+      setCurrentPage(1);
+
+    } catch (err) {
+      setError('필터 적용에 실패했습니다.');
+      console.error('다중 필터 에러:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 필터 토글
+  const toggleFilter = (filterType, value) => {
+    setSelectedFilters(prev => {
+      const current = prev[filterType];
+      const isSelected = current.includes(value);
+      
+      return {
+        ...prev,
+        [filterType]: isSelected 
+          ? current.filter(item => item !== value)
+          : [...current, value]
+      };
+    });
+  };
+
+  // 특정 필터 타입 초기화
+  const clearFilterType = (filterType) => {
+    setSelectedFilters(prev => ({
+      ...prev,
+      [filterType]: []
+    }));
+  };
+
+  // 모든 필터 초기화
+  const clearAllFilters = () => {
+    setSelectedFilters({
+      brands: [],
+      categories: [],
+      sub_categories: [],
+      skin_types: []
+    });
+    setPriceRange({ min: null, max: null });
+    loadProducts();
+  };
+
   const changeFilterType = (type) => {
     setActiveFilterType(type);
   };
 
+  // 현재 필터 옵션 가져오기
   const getCurrentFilterOptions = () => {
-    switch (activeFilterType) {
-      case 'brands':
-        return filterOptions.brands;
-      case 'categories':
-        return filterOptions.categories;
-      case 'sub_categories':
-        return filterOptions.sub_categories;
-      case 'tags':
-        return filterOptions.tags;
-      default:
-        return [];
-    }
+    const selected = filterOptions[activeFilterType];
+    if (!selected) return [];
+    return Array.isArray(selected) ? selected : [];
   };
 
-  const getFilterTypeName = () => {
-    switch (activeFilterType) {
-      case 'brands':
-        return '브랜드';
-      case 'categories':
-        return '카테고리';
-      case 'sub_categories':
-        return '서브카테고리';
-      case 'tags':
-        return '태그';
-      default:
-        return '';
-    }
+  // 필터 타입 이름
+  const getFilterTypeName = (type = activeFilterType) => {
+    const map = {
+      brands: '브랜드',
+      categories: '카테고리',
+      sub_categories: '서브카테고리',
+      skin_types: '피부타입'
+    };
+    return map[type] || type;
   };
 
-  // 👇 추가: 페이지네이션 관련 함수
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
     const startIndex = (pageNumber - 1) * itemsPerPage;
@@ -188,39 +331,30 @@ function App() {
     setProducts(allProducts.slice(startIndex, endIndex));
   };
 
-  const totalPages = Math.ceil(allProducts.length / itemsPerPage);
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-  // 👇 추가: 페이지 번호 배열 생성 (최대 5개 표시)
   const getPageNumbers = () => {
     const pages = [];
     const maxPagesToShow = 5;
-    
+
     if (totalPages <= maxPagesToShow) {
-      // 전체 페이지가 5개 이하면 모두 표시
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else {
-      // 현재 페이지 기준으로 앞뒤 2개씩
       let startPage = Math.max(1, currentPage - 2);
       let endPage = Math.min(totalPages, currentPage + 2);
-      
-      // 시작이 1이면 끝을 5로
-      if (startPage === 1) {
-        endPage = Math.min(totalPages, 5);
-      }
-      
-      // 끝이 마지막이면 시작을 조정
-      if (endPage === totalPages) {
-        startPage = Math.max(1, totalPages - 4);
-      }
-      
-      for (let i = startPage; i <= endPage; i++) {
-        pages.push(i);
-      }
+
+      if (startPage === 1) endPage = Math.min(totalPages, 5);
+      if (endPage === totalPages) startPage = Math.max(1, totalPages - 4);
+
+      for (let i = startPage; i <= endPage; i++) pages.push(i);
     }
-    
+
     return pages;
+  };
+
+  // 선택된 필터 개수
+  const getSelectedFilterCount = () => {
+    return Object.values(selectedFilters).reduce((sum, arr) => sum + arr.length, 0);
   };
 
   return (
@@ -234,9 +368,7 @@ function App() {
               <p>재고 관리 시스템</p>
             </div>
           </div>
-          <div className="header-badge">
-            Staff Dashboard
-          </div>
+          <div className="header-badge">Staff Dashboard</div>
         </div>
       </header>
 
@@ -267,7 +399,7 @@ function App() {
             <div className="stat-item">
               <div className="stat-icon">🔍</div>
               <div className="stat-content">
-                <div className="stat-value">{allProducts.length}</div> {/* 👈 수정 */}
+                <div className="stat-value">{totalItems}</div>
                 <div className="stat-label">검색 결과</div>
               </div>
             </div>
@@ -287,95 +419,122 @@ function App() {
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
-            <button className="search-button" onClick={handleSearch}>
-              검색
-            </button>
-            <button className="reset-button" onClick={loadProducts}>
-              전체보기
-            </button>
+            <button className="search-button" onClick={handleSearch}>검색</button>
+            <button className="reset-button" onClick={loadProducts}>전체보기</button>
           </div>
 
+          {/* 필터 타입 선택 */}
           <div className="filter-type-selector">
             <span className="filter-type-label">필터 기준:</span>
-            <button 
-              className={`filter-type-btn ${activeFilterType === 'brands' ? 'active' : ''}`}
-              onClick={() => changeFilterType('brands')}
-            >
-              브랜드
-            </button>
-            <button 
-              className={`filter-type-btn ${activeFilterType === 'categories' ? 'active' : ''}`}
-              onClick={() => changeFilterType('categories')}
-            >
-              카테고리
-            </button>
-            <button 
-              className={`filter-type-btn ${activeFilterType === 'sub_categories' ? 'active' : ''}`}
-              onClick={() => changeFilterType('sub_categories')}
-            >
-              서브카테고리
-            </button>
-            <button 
-              className={`filter-type-btn ${activeFilterType === 'tags' ? 'active' : ''}`}
-              onClick={() => changeFilterType('tags')}
-            >
-              태그
-            </button>
+            {['brands', 'categories', 'sub_categories', 'skin_types'].map((key) => (
+              <button
+                key={key}
+                className={`filter-type-btn ${activeFilterType === key ? 'active' : ''}`}
+                onClick={() => changeFilterType(key)}
+              >
+                {getFilterTypeName(key)}
+                {selectedFilters[key] && selectedFilters[key].length > 0 && (
+                  <span className="filter-count-badge">{selectedFilters[key].length}</span>
+                )}
+              </button>
+            ))}
           </div>
 
+          {/* 정렬 옵션 */}
+          <div className="sort-selector">
+            <span className="sort-label">정렬:</span>
+            <select 
+              className="sort-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="popularity">인기순</option>
+              <option value="price_low">낮은 가격순</option>
+              <option value="price_high">높은 가격순</option>
+              <option value="recent">최신순</option>
+              <option value="discount">할인율순</option>
+            </select>
+          </div>
+
+          {/* 빠른 검색 태그 */}
           <div className="quick-search-tags">
             <span className="quick-search-label">빠른 검색:</span>
             {getCurrentFilterOptions().slice(0, 10).map(option => (
               <button 
                 key={option} 
-                className="quick-tag"
-                onClick={() => handleFilterClick(option)}
+                className={`quick-tag ${selectedFilters[activeFilterType]?.includes(option) ? 'selected' : ''}`}
+                onClick={() => handleQuickFilter(activeFilterType, option)}
               >
                 {option}
               </button>
             ))}
             {getCurrentFilterOptions().length > 10 && (
-              <button 
-                className="more-filters-btn"
-                onClick={() => setShowAllFilters(true)}
-              >
+              <button className="more-filters-btn" onClick={() => setShowAllFilters(true)}>
                 +{getCurrentFilterOptions().length - 10}개 더보기
               </button>
             )}
           </div>
+
+          {/* 선택된 필터 표시 */}
+          {getSelectedFilterCount() > 0 && (
+            <div className="selected-filters-section">
+              <div className="selected-filters-header">
+                <span className="selected-filters-label">
+                  선택된 필터 ({getSelectedFilterCount()}개)
+                </span>
+                <button className="clear-all-btn" onClick={clearAllFilters}>
+                  전체 해제
+                </button>
+              </div>
+              <div className="selected-filters-tags">
+                {Object.entries(selectedFilters).map(([type, values]) => (
+                  values.length > 0 && (
+                    <div key={type} className="filter-group">
+                      <span className="filter-group-label">{getFilterTypeName(type)}:</span>
+                      {values.map(value => (
+                        <button 
+                          key={value} 
+                          className="selected-filter-tag"
+                          onClick={() => toggleFilter(type, value)}
+                        >
+                          {value} ✕
+                        </button>
+                      ))}
+                    </div>
+                  )
+                ))}
+              </div>
+              <button className="apply-filters-btn" onClick={applyMultipleFilters}>
+                필터 적용하기
+              </button>
+            </div>
+          )}
         </div>
 
+        {/* 필터 모달 */}
         {showAllFilters && (
           <div className="modal-overlay" onClick={() => setShowAllFilters(false)}>
             <div className="filter-modal" onClick={(e) => e.stopPropagation()}>
               <div className="filter-modal-header">
                 <h3>전체 {getFilterTypeName()} 목록</h3>
-                <button 
-                  className="modal-close-btn"
-                  onClick={() => setShowAllFilters(false)}
-                >
-                  ✕
-                </button>
+                <button className="modal-close-btn" onClick={() => setShowAllFilters(false)}>✕</button>
               </div>
-              
               <div className="filter-modal-content">
                 <div className="filter-grid">
-                  {getCurrentFilterOptions().map(option => (
+                  {getCurrentFilterOptions().map(item => (
                     <button 
-                      key={option}
-                      className="filter-grid-item"
-                      onClick={() => handleFilterClick(option)}
+                      key={item} 
+                      className={`filter-grid-item ${selectedFilters[activeFilterType]?.includes(item) ? 'selected' : ''}`}
+                      onClick={() => handleQuickFilter(activeFilterType, item)}
                     >
-                      {option}
+                      {item}
+                      {selectedFilters[activeFilterType]?.includes(item) && ' ✓'}
                     </button>
                   ))}
                 </div>
               </div>
-
               <div className="filter-modal-footer">
-                <div className="filter-count">
-                  총 {getCurrentFilterOptions().length}개의 {getFilterTypeName()}
-                </div>
+                총 {getCurrentFilterOptions().length}개의 {getFilterTypeName()}
               </div>
             </div>
           </div>
@@ -387,7 +546,7 @@ function App() {
             <p>상품을 불러오는 중입니다...</p>
           </div>
         )}
-        
+
         {error && (
           <div className="error">
             <p>❌ {error}</p>
@@ -400,92 +559,72 @@ function App() {
             <div className="products-header">
               <h2>전체 상품</h2>
               <div className="products-header-info">
-                <span className="product-count">{allProducts.length}개</span> {/* 👈 수정 */}
+                <span className="product-count">{totalItems}개</span>
                 <span className="page-info">
-                  {allProducts.length > 0 && (
-                    <>페이지 {currentPage} / {totalPages}</>
-                  )}
+                  {totalItems > 0 && <>페이지 {currentPage} / {totalPages}</>}
                 </span>
               </div>
             </div>
-            
+
             {products.length === 0 ? (
-              <div className="empty">
-                <p>검색 결과가 없습니다</p>
-              </div>
+              <div className="empty"><p>검색 결과가 없습니다</p></div>
             ) : (
               <>
                 <div className="product-grid">
-                  {products.map(product => (
-                    <div key={product.product_id} className="product-card">
-                      <div className="product-image-placeholder">
-                        💄
-                      </div>
+                  {products.map(product => {
+                    const productId = product.product_id || product.goodsNo || product.id;
+                    const displayPrice = product.price_cur || product.price || 0;
+                    const originalPrice = product.price_org || product.original_price || 0;
+                    const discountRate = originalPrice > displayPrice 
+                      ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
+                      : 0;
 
-                      <div className="product-content">
-                        <div className="product-header">
-                          <span className="brand">{product.brand}</span>
-                          {product.discount_rate > 0 && (
-                            <span className="discount">{product.discount_rate}%</span>
+                    return (
+                      <div key={productId} className="product-card">
+                        <div className="product-image-wrapper">
+                          {product.image ? (
+                            <img src={product.image} alt={product.name} className="product-image" />
+                          ) : (
+                            <div className="product-image-placeholder">💄</div>
                           )}
                         </div>
-                        
-                        <h3 className="product-name">{product.name}</h3>
-                        <p className="category">{product.category}</p>
-                        
-                        <div className="price-section">
-                          <span className="price">
-                            {product.price.toLocaleString()}원
-                          </span>
-                          {product.discount_rate > 0 && (
-                            <span className="original-price">
-                              {product.original_price.toLocaleString()}원
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="stock-section">
-                          <span className={
-                            product.stock.current <= product.stock.threshold 
-                              ? 'stock-low' 
-                              : 'stock-ok'
-                          }>
-                            📦 재고 {product.stock.current}개
-                          </span>
-                          <span className="location">📍 {product.location.zone}</span>
-                        </div>
-                        
-                        {product.tags && product.tags.length > 0 && (
-                          <div className="tags">
-                            {product.tags.slice(0, 3).map(tag => (
-                              <span key={tag} className="tag">#{tag}</span>
-                            ))}
+                        <div className="product-content">
+                          <div className="product-header">
+                            <span className="brand">{product.brand}</span>
+                            {discountRate > 0 && <span className="discount">{discountRate}%</span>}
                           </div>
-                        )}
+                          <h3 className="product-name">{product.name}</h3>
+                          <p className="category">
+                            {product.first_category || product.category || '카테고리 없음'}
+                            {product.mid_category && ` > ${product.mid_category}`}
+                            {product.sub_category && ` > ${product.sub_category}`}
+                          </p>
+                          <div className="price-section">
+                            <span className="price">{displayPrice.toLocaleString()}원</span>
+                            {originalPrice > displayPrice && (
+                              <span className="original-price">{originalPrice.toLocaleString()}원</span>
+                            )}
+                          </div>
+                          <div className="stock-section">
+                            <span className={product.stock <= 10 ? 'stock-low' : 'stock-ok'}>
+                              📦 재고 {product.stock ?? '정보 없음'}
+                            </span>
+                            {product.spec && (
+                              <span className="spec-tag">
+                                👤 {product.spec}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
-                {/* 👇 추가: 페이지네이션 */}
                 {totalPages > 1 && (
                   <div className="pagination">
-                    <button 
-                      className="pagination-btn"
-                      onClick={() => handlePageChange(1)}
-                      disabled={currentPage === 1}
-                    >
-                      ⟨⟨
-                    </button>
-                    
-                    <button 
-                      className="pagination-btn"
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
-                    >
-                      ⟨
-                    </button>
-
+                    <button className="pagination-btn" onClick={() => handlePageChange(1)} disabled={currentPage === 1}>⟨⟨</button>
+                    <button className="pagination-btn" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>⟨</button>
                     {getPageNumbers().map(pageNum => (
                       <button
                         key={pageNum}
@@ -495,22 +634,8 @@ function App() {
                         {pageNum}
                       </button>
                     ))}
-
-                    <button 
-                      className="pagination-btn"
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                    >
-                      ⟩
-                    </button>
-
-                    <button 
-                      className="pagination-btn"
-                      onClick={() => handlePageChange(totalPages)}
-                      disabled={currentPage === totalPages}
-                    >
-                      ⟩⟩
-                    </button>
+                    <button className="pagination-btn" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>⟩</button>
+                    <button className="pagination-btn" onClick={() => handlePageChange(totalPages)} disabled={currentPage === totalPages}>⟩⟩</button>
                   </div>
                 )}
               </>
@@ -522,12 +647,8 @@ function App() {
       <footer className="App-footer">
         <div className="footer-content">
           <div className="footer-logo">🌿 OLIVE YOUNG</div>
-          <p className="footer-text">
-            건강한 아름다움을 위한 스마트 재고 관리 시스템
-          </p>
-          <div className="footer-tip">
-            💡 Tip: FastAPI 서버(http://localhost:8000)가 실행 중이어야 합니다
-          </div>
+          <p className="footer-text">건강한 아름다움을 위한 스마트 재고 관리 시스템</p>
+          <div className="footer-tip">💡 Tip: FastAPI 서버(http://localhost:8000)가 실행 중이어야 합니다</div>
         </div>
       </footer>
     </div>

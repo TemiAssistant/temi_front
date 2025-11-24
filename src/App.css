@@ -1258,3 +1258,340 @@ body {
     font-size: 0.85em;
   }
 }
+/* ========== 필터 타입 선택기 ========== */
+.filter-type-selector {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--olive-border);
+}
+
+.filter-type-label {
+  color: var(--olive-text-light);
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+.filter-type-btn {
+  padding: 10px 20px;
+  border: 2px solid var(--olive-border);
+  background: white;
+  border-radius: 10px;
+  font-size: 0.95em;
+  font-weight: 600;
+  color: var(--olive-text);
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.filter-type-btn:hover {
+  background: var(--olive-primary-light);
+  border-color: var(--olive-primary);
+  color: var(--olive-primary-dark);
+}
+
+.filter-type-btn.active {
+  background: var(--olive-primary);
+  border-color: var(--olive-primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 199, 60, 0.2);
+}
+
+.filter-count-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: var(--olive-secondary);
+  color: white;
+  font-size: 0.75em;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(255, 107, 107, 0.3);
+}
+
+/* ========== 빠른 검색 태그 선택 상태 ========== */
+.quick-tag.selected {
+  background: var(--olive-primary);
+  border-color: var(--olive-primary);
+  color: white;
+  font-weight: 600;
+}
+
+.more-filters-btn {
+  padding: 8px 16px;
+  background: var(--olive-primary);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.more-filters-btn:hover {
+  background: var(--olive-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 199, 60, 0.3);
+}
+
+/* ========== 선택된 필터 섹션 ========== */
+.selected-filters-section {
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--olive-bg-gray);
+  border-radius: 12px;
+  border: 2px solid var(--olive-primary-light);
+}
+
+.selected-filters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.selected-filters-label {
+  font-size: 1em;
+  font-weight: 700;
+  color: var(--olive-primary-dark);
+}
+
+.clear-all-btn {
+  padding: 6px 16px;
+  background: white;
+  border: 2px solid var(--olive-border);
+  border-radius: 8px;
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--olive-text-light);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.clear-all-btn:hover {
+  background: var(--olive-secondary);
+  border-color: var(--olive-secondary);
+  color: white;
+}
+
+.selected-filters-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-group-label {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--olive-text);
+  min-width: 80px;
+}
+
+.selected-filter-tag {
+  padding: 6px 12px;
+  background: var(--olive-primary);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.selected-filter-tag:hover {
+  background: var(--olive-secondary);
+  transform: scale(1.05);
+}
+
+.apply-filters-btn {
+  width: 100%;
+  padding: 14px 24px;
+  background: var(--olive-primary);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1em;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 199, 60, 0.2);
+}
+
+.apply-filters-btn:hover {
+  background: var(--olive-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 199, 60, 0.3);
+}
+
+.apply-filters-btn:active {
+  transform: translateY(0);
+}
+
+/* ========== 필터 모달 선택 상태 ========== */
+.filter-grid-item.selected {
+  background: var(--olive-primary);
+  border-color: var(--olive-primary);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 199, 60, 0.3);
+}
+
+/* ========== 상품 이미지 스타일 ========== */
+.product-image-wrapper {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background: var(--olive-bg-gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.product-card:hover .product-image {
+  transform: scale(1.1);
+}
+
+/* ========== 피부타입 태그 ========== */
+.spec-tag {
+  color: var(--olive-text-light);
+  font-size: 0.85em;
+  font-weight: 500;
+  padding: 4px 8px;
+  background: var(--olive-bg-gray);
+  border-radius: 6px;
+}
+
+/* ========== 반응형 (필터 섹션) ========== */
+@media (max-width: 768px) {
+  .filter-type-selector {
+    gap: 8px;
+  }
+
+  .filter-type-btn {
+    padding: 8px 16px;
+    font-size: 0.9em;
+  }
+
+  .selected-filters-section {
+    padding: 15px;
+  }
+
+  .filter-group-label {
+    min-width: 60px;
+    font-size: 0.85em;
+  }
+
+  .selected-filter-tag {
+    font-size: 0.8em;
+    padding: 5px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .filter-type-selector {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-type-btn {
+    width: 100%;
+  }
+
+  .selected-filters-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .clear-all-btn {
+    width: 100%;
+  }
+
+  .filter-group {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .apply-filters-btn {
+    padding: 12px 20px;
+  }
+}
+
+/* ========== 정렬 선택기 ========== */
+.sort-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  margin-top: 10px;
+  border-top: 1px solid var(--olive-border);
+}
+
+.sort-label {
+  color: var(--olive-text-light);
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+.sort-select {
+  padding: 8px 16px;
+  border: 2px solid var(--olive-border);
+  border-radius: 10px;
+  font-size: 0.95em;
+  font-weight: 500;
+  color: var(--olive-text);
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  outline: none;
+}
+
+.sort-select:hover {
+  border-color: var(--olive-primary);
+  background: var(--olive-primary-light);
+}
+
+.sort-select:focus {
+  border-color: var(--olive-primary);
+  box-shadow: 0 0 0 3px var(--olive-primary-light);
+}
+
+/* ========== 반응형 (정렬 선택기) ========== */
+@media (max-width: 768px) {
+  .sort-selector {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sort-select {
+    width: 100%;
+  }
+}
