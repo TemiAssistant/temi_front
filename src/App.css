@@ -188,7 +188,6 @@ body {
   gap: 8px;
   flex-wrap: wrap;
   padding-top: 15px;
-  border-top: 1px solid var(--olive-border);
 }
 
 .quick-search-label {
@@ -334,6 +333,11 @@ body {
   transform: translateY(-8px);
   box-shadow: 0 12px 24px rgba(0, 199, 60, 0.15);
   border-color: var(--olive-primary);
+}
+
+.product-card:focus-visible {
+  outline: 3px solid var(--olive-primary);
+  outline-offset: 4px;
 }
 
 .product-image-placeholder {
@@ -669,7 +673,6 @@ body {
   flex-wrap: wrap;
   align-items: center;
   padding: 15px 0;
-  border-bottom: 1px solid var(--olive-border);
   margin-bottom: 15px;
 }
 
@@ -798,12 +801,125 @@ body {
   overflow-y: auto; /* 👈 추가: 모바일에서도 스크롤 가능 */
 }
 
+.stock-modal {
+  background: #fff;
+  width: min(420px, 92%);
+  border-radius: 24px;
+  padding: 28px 24px 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  position: relative;
+  animation: fadeInUp 0.3s ease;
+}
+
+.stock-modal h3 {
+  margin-bottom: 12px;
+  color: var(--olive-text);
+}
+
+.stock-modal-product-name {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--olive-text);
+}
+
+.stock-modal-product-brand {
+  margin-bottom: 12px;
+  color: var(--olive-text-light);
+  font-size: 0.9em;
+}
+
+.stock-modal-current {
+  margin-bottom: 12px;
+  font-size: 0.95em;
+  color: var(--olive-text);
+}
+
+.stock-modal-label {
+  display: block;
+  font-size: 0.85em;
+  margin-bottom: 6px;
+  color: var(--olive-text-light);
+}
+
+.stock-modal input {
+  width: 100%;
+  border: 2px solid var(--olive-border);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 1em;
+  transition: border 0.2s ease;
+}
+
+.stock-modal input:focus {
+  outline: none;
+  border-color: var(--olive-primary);
+  box-shadow: 0 0 0 3px rgba(0, 199, 60, 0.15);
+}
+
+.stock-modal-error {
+  margin-top: 10px;
+  color: #e74c3c;
+  font-size: 0.9em;
+}
+
+.stock-modal-success {
+  margin-top: 10px;
+  color: var(--olive-primary);
+  font-size: 0.9em;
+}
+
+.stock-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.stock-modal-actions button {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.stock-modal-actions button.secondary {
+  background: var(--olive-bg-gray);
+  color: var(--olive-text);
+}
+
+.stock-modal-actions button:not(.secondary) {
+  background: var(--olive-primary);
+  color: #fff;
+}
+
+.stock-modal-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.stock-modal-actions button:not(.secondary):hover:not(:disabled) {
+  background: var(--olive-primary-dark);
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -1266,7 +1382,6 @@ body {
   align-items: center;
   margin-bottom: 15px;
   padding-bottom: 15px;
-  border-bottom: 1px solid var(--olive-border);
 }
 
 .filter-type-label {
@@ -1552,7 +1667,6 @@ body {
   gap: 10px;
   padding: 10px 0;
   margin-top: 10px;
-  border-top: 1px solid var(--olive-border);
 }
 
 .sort-label {

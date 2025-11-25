@@ -170,4 +170,15 @@ export const productAPI = {
   },
 };
 
+export const inventoryAPI = {
+  /**
+   * 재고 수동 업데이트
+   * POST /api/inventory/update
+   * @param {Object} payload - { product_id, new_stock, reason, requested_by }
+   */
+  updateStockManually: async (payload) => {
+    return await apiClient.post('/inventory/update', payload);
+  },
+};
+
 export default apiClient;

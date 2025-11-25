@@ -4,7 +4,7 @@
  * 기존 products.py API 구조에 맞춰 수정됨
  */
 import React, { useState, useEffect } from 'react';
-import { productAPI } from './services/api';
+import { productAPI, inventoryAPI } from './services/api';
 import './App.css';
 
 const DEFAULT_FETCH_LIMIT = 150;
@@ -76,6 +76,15 @@ function App() {
   // 정렬 옵션
   const [sortBy, setSortBy] = useState('popularity');
   const [fetchLimit, setFetchLimit] = useState(DEFAULT_FETCH_LIMIT);
+
+  // 재고 조정 모달 상태
+  const [stockModalProduct, setStockModalProduct] = useState(null);
+  const [newStockInput, setNewStockInput] = useState('');
+  const [stockUpdateStatus, setStockUpdateStatus] = useState({
+    loading: false,
+    error: null,
+    success: false
+  });
 
   const calculateFetchLimit = (count) => {
     const base = count && count > 0 ? count : DEFAULT_FETCH_LIMIT;
@@ -446,6 +455,129 @@ function App() {
     return Object.values(selectedFilters).reduce((sum, arr) => sum + arr.length, 0);
   };
 
+  const getCanonicalProductId = (product) => {
+    if (!product) return null;
+    return product.product_id || product.goodsNo || product.id;
+  };
+
+  const getProductStockValue = (product) => {
+    if (!product) return null;
+    const stockInfo = product.stock;
+    if (typeof stockInfo === 'object' && stockInfo !== null) {
+      const value = stockInfo.current;
+      if (Number.isFinite(value)) return value;
+      const parsed = parseInt(value, 10);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+    if (typeof stockInfo === 'number') return stockInfo;
+    if (stockInfo == null) return null;
+    const parsed = parseInt(stockInfo, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  const synchronizeProductStock = (productId, updatedStock, thresholdValue = null) => {
+    const updateList = (list) => list.map(product => {
+      const pid = getCanonicalProductId(product);
+      if (pid !== productId) return product;
+      const existingStock = product.stock;
+      let normalizedStock;
+      if (typeof existingStock === 'object' && existingStock !== null) {
+        normalizedStock = { ...existingStock, current: updatedStock };
+        if (thresholdValue !== null) {
+          normalizedStock.threshold = thresholdValue;
+        }
+      } else {
+        normalizedStock = {
+          current: updatedStock,
+          threshold: thresholdValue ?? 0,
+          unit_weight: 0
+        };
+      }
+      return { ...product, stock: normalizedStock };
+    });
+
+    setProducts(prev => updateList(prev));
+    setAllProducts(prev => updateList(prev));
+    setStockModalProduct(prev => {
+      if (!prev) return prev;
+      if (getCanonicalProductId(prev) !== productId) return prev;
+      const normalizedStock = typeof prev.stock === 'object' && prev.stock !== null
+        ? { ...prev.stock, current: updatedStock }
+        : { current: updatedStock, threshold: thresholdValue ?? 0, unit_weight: 0 };
+      return { ...prev, stock: normalizedStock };
+    });
+  };
+
+  const openStockModal = (product) => {
+    setStockModalProduct(product);
+    const current = getProductStockValue(product);
+    setNewStockInput(current !== null ? String(current) : '');
+    setStockUpdateStatus({
+      loading: false,
+      error: null,
+      success: false
+    });
+  };
+
+  const closeStockModal = () => {
+    setStockModalProduct(null);
+    setNewStockInput('');
+    setStockUpdateStatus({
+      loading: false,
+      error: null,
+      success: false
+    });
+  };
+
+  const handleProductCardKey = (event, product) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openStockModal(product);
+    }
+  };
+
+  const handleStockUpdateSubmit = async () => {
+    if (!stockModalProduct) return;
+    const parsedValue = parseInt(newStockInput, 10);
+    if (Number.isNaN(parsedValue) || parsedValue < 0) {
+      setStockUpdateStatus({
+        loading: false,
+        error: '재고는 0 이상의 숫자로 입력해주세요.',
+        success: false
+      });
+      return;
+    }
+
+    const productId = getCanonicalProductId(stockModalProduct);
+    if (!productId) {
+      setStockUpdateStatus({
+        loading: false,
+        error: '상품 ID를 확인할 수 없습니다.',
+        success: false
+      });
+      return;
+    }
+
+    try {
+      setStockUpdateStatus({ loading: true, error: null, success: false });
+      const response = await inventoryAPI.updateStockManually({
+        product_id: productId,
+        new_stock: parsedValue,
+        reason: 'Dashboard manual adjustment',
+        requested_by: 'dashboard'
+      });
+      const updatedStock = response?.data?.item?.current_stock ?? parsedValue;
+      const updatedThreshold = response?.data?.item?.threshold ?? null;
+      synchronizeProductStock(productId, updatedStock, updatedThreshold);
+      setStockUpdateStatus({ loading: false, error: null, success: true });
+    } catch (err) {
+      const message = err?.response?.data?.detail || '재고 업데이트에 실패했습니다.';
+      setStockUpdateStatus({ loading: false, error: message, success: false });
+    }
+  };
+
+  const modalCurrentStock = getProductStockValue(stockModalProduct);
+
   return (
     <div className="App">
       <header className="App-header">
@@ -684,7 +816,14 @@ function App() {
                     const productImage = product.image_url || product.image || product.imageUrl || product.thumbnail;
 
                     return (
-                      <div key={productId} className="product-card">
+                      <div
+                        key={productId}
+                        className="product-card"
+                        onClick={() => openStockModal(product)}
+                        onKeyDown={(event) => handleProductCardKey(event, product)}
+                        role="button"
+                        tabIndex={0}
+                      >
                         <div className="product-image-wrapper">
                           {productImage ? (
                             <img src={productImage} alt={product.name} className="product-image" />
@@ -755,6 +894,54 @@ function App() {
           <div className="footer-tip">💡 Tip: FastAPI 서버(http://localhost:8000)가 실행 중이어야 합니다</div>
         </div>
       </footer>
+
+      {stockModalProduct && (
+        <div className="modal-overlay" onClick={closeStockModal}>
+          <div className="stock-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={closeStockModal} aria-label="Close">&times;</button>
+            <h3>재고 수동 조정</h3>
+            <p className="stock-modal-product-name">{stockModalProduct.name}</p>
+            <p className="stock-modal-product-brand">{stockModalProduct.brand}</p>
+            <p className="stock-modal-current">
+              현재 재고: <strong>{modalCurrentStock ?? '정보 없음'}</strong>
+            </p>
+            <label className="stock-modal-label" htmlFor="stock-input">
+              새 재고 수량
+            </label>
+            <input
+              id="stock-input"
+              type="number"
+              min="0"
+              value={newStockInput}
+              onChange={(event) => setNewStockInput(event.target.value)}
+              placeholder="0"
+            />
+            {stockUpdateStatus.error && (
+              <p className="stock-modal-error">{stockUpdateStatus.error}</p>
+            )}
+            {stockUpdateStatus.success && (
+              <p className="stock-modal-success">재고가 업데이트되었습니다.</p>
+            )}
+            <div className="stock-modal-actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={closeStockModal}
+                disabled={stockUpdateStatus.loading}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleStockUpdateSubmit}
+                disabled={stockUpdateStatus.loading}
+              >
+                {stockUpdateStatus.loading ? '업데이트 중...' : '재고 업데이트'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
