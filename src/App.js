@@ -681,11 +681,13 @@ function App() {
                       ? parsedStockValue
                       : (currentStockValue ?? '정보 없음');
 
+                    const productImage = product.image_url || product.image || product.imageUrl || product.thumbnail;
+
                     return (
                       <div key={productId} className="product-card">
                         <div className="product-image-wrapper">
-                          {product.image ? (
-                            <img src={product.image} alt={product.name} className="product-image" />
+                          {productImage ? (
+                            <img src={productImage} alt={product.name} className="product-image" />
                           ) : (
                             <div className="product-image-placeholder">💄</div>
                           )}
