@@ -59,7 +59,7 @@ export const productAPI = {
    * @param {string} query - 검색어
    * @param {number} limit - 조회할 최대 개수
    */
-  quickSearch: async (query, limit = 100) => {
+  quickSearch: async (query, limit = 50) => {
     return await apiClient.get('/products/search/quick', {
       params: { 
         q: query,  // 주의: 'q' 파라미터 사용
