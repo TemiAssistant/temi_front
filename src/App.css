@@ -420,6 +420,32 @@ body {
   margin-bottom: 12px;
 }
 
+.product-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--olive-primary-light);
+  color: var(--olive-primary-dark);
+  font-size: 0.85em;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.location-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--olive-primary);
+  display: inline-flex;
+  box-shadow: 0 0 0 4px rgba(0, 199, 60, 0.15);
+}
+
+.location-text {
+  letter-spacing: 0.2px;
+}
+
 .price-section {
   display: flex;
   align-items: baseline;

@@ -842,6 +842,15 @@ function App() {
                             {product.mid_category && ` > ${product.mid_category}`}
                             {product.sub_category && ` > ${product.sub_category}`}
                           </p>
+                          <div
+                            className="product-location"
+                            title={`?? ??: ${product.zone || product.location || product.zone_name || '?? ?? ??'}`}
+                          >
+                            <span className="location-dot" />
+                            <span className="location-text">
+                              ??: {product.zone || product.location || product.zone_name || '?? ??'}
+                            </span>
+                          </div>
                           <div className="price-section">
                             <span className="price">{displayPrice.toLocaleString()}원</span>
                             {originalPrice > displayPrice && (
